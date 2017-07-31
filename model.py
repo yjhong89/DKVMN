@@ -16,9 +16,9 @@ class Model():
 
 	def create_model():
 		# 'seq_len' means question sequences
-		self.q_data = tf.placeholder(tf.float32, [self.args.batch_size, self.args.seq_len], name='q_data') 
-		self.qa_data = tf.placeholder(tf.float32, [self.args.batch_size, self.args.seq_len], name='qa_data')
-		self.target = tf.placeholder(tf.float32, [self.args.batch_size, self.args.seq_len], name='target')
+		self.q_data = tf.placeholder(tf.float32, [None, self.args.seq_len], name='q_data') 
+		self.qa_data = tf.placeholder(tf.float32, [None, self.args.seq_len], name='qa_data')
+		self.target = tf.placeholder(tf.float32, [None, self.args.seq_len], name='target')
 
 		# Initialize Memory
 		with tf.variable_scope('Memory'):
@@ -94,12 +94,11 @@ class Model():
 		self.saver = tf.train.Saver()
 		
 
-
-	def train(self, q_data, qa_data, label):
+	def train(self, train_q_data, train_qa_data, valid_q_data, valid_qa_data, label):
 		# q_data, qa_data : [samples, seq_len]
 		shuffle_index = np.random.permutation(q_data.shape[0])
-		q_data_shuffled = q_data[shuffle_index]
-		qa_data_shuffled = qa_data[shuffle_index]
+		q_data_shuffled = train_q_data[shuffle_index]
+		qa_data_shuffled = train_qa_data[shuffle_index]
 
 		training_step = q_data.shape[0] // self.args.batch_size
 		
@@ -113,15 +112,15 @@ class Model():
 		else:
 			print('No checkpoint')
 
-
 		# Training
-		for epoch in xrange(self.args.num_epochs):
+		for epoch in xrange(self.train_count, self.args.num_epochs):
 			if self.args.show:
 				bar.next()
 
 			pred_list = list()
 			target_list = list()		
 			epoch_loss = 0
+			best_valid_auc = 0
 
 			print('Epoch %d starts' % (epoch+1))
 			for steps in xrange(training_step):
@@ -130,8 +129,8 @@ class Model():
 				qa_batch_seq = qa_data_shuffled[steps*self.args.batch_size:(steps+1)*self.args.batch_size, :]
 	
 				# qa : exercise index + answer(0 or 1)*exercies_number
-				# right : 1, wrong : 0
-				target_batch = qa_batch_seq // self.args.n_questions  
+				# right : 1, wrong : 0, padding : -1
+				target_batch = (qa_batch_seq - 1) // self.args.n_questions  
 
 				feed_dict = {self.q_data:q_batch_seq, slef.qa_data:qa_batch_seq, self.target:target_batch}
 				loss_, pred_, _, = self.sess.run([self.loss, self.pred, self.train_op], feed_dict=feed_dict)
@@ -141,7 +140,7 @@ class Model():
 				right_target = target_batch.asnumpy().reshaspe(-1,)
 				right_pred = pred.asnumpy().reshape(-1,)
 				# np.flatnonzero returns indices which is nonzero, convert it list 
-				right_index = np.flatnonzero(right_target).tolist()
+				right_index = np.flatnonzero(right_target != -1).tolist()
 				
 				# 'training_step' elements list with [batch size * seq_len, ]
 				pred_list.append(right_pred[right_index])
@@ -158,10 +157,10 @@ class Model():
 
 			# Compute metrics
 			self.auc = metrics.roc_auc_score(all_target, all_pred)
-			all_pred[all_pred > 0.5] = 1
 			# Extract elements with boolean index
 			# Make '1' for elements higher than 0.5
 			# Make '0' for elements lower than 0.5
+			all_pred[all_pred > 0.5] = 1
 			all_pred[all_pred <= 0.5] = 0
 			self.accuracy = metrics.accuracy_score(all_target, all_pred)
 
@@ -169,6 +168,33 @@ class Model():
 			print('Epoch %d/%d, loss : %3.5f, auc : %3.5f, accuracy : %3.5f' % (epoch+1, self.args.num_epochs, epoch_loss, self.auc, self.accuracy))
 			self.write_log(epoch+1, self.auc, self.accuracy, epoch_loss, name='training_')
 
+			# Validation
+			valid_q = valid_q_data[:self.args.validation_index, :]
+			valid_qa = valid_qa_data[:self.args.validation_index, :]
+			# right : 1, wrong : 0, padding : -1
+			valid_target = (valid_qa - 1) // self.args.n_questions
+			valid_feed_dict = {self.q_data : valid_q, self.qa_data : valid_qa, self.target : valid_target}
+			valid_loss, valid_pred = self.sess.run([self.loss, self.pred], feed_dict=valid_feed_dict)
+			# Same with training set
+			valid_right_target = valid_target.asnumpy().reshape(-1,)
+			valid_right_pred = valid_pred.asnumpy().reshape(-1,)
+			valid_right_index = np.flatnonzero(valid_right_target != -1).tolist()
+			valid_auc = metrics.roc_auc_score(valid_right_target[valid_right_index], valid_right_pred[valid_right_index])
+		 	# For validation accuracy
+			valid_right_pred[valid_right_index][valid_right_pred[valid_right_index] > 0.5] = 1
+			valid_right_pred[valid_right_index][valid_right_pred[valid_right_index] <= 0.5] = 0
+			valid_accuracy = metrics.accuracy_score(valid_right_target[valid_right_index], valid_right_pred[valid_right_index])
+			# Valid log
+			self.write_log(epoch+1, valid_auc, valid_accuracy, valid_loss, name='valid_')
+			if valid_auc > best_valid_auc:
+				best_valid_auc = valid_auc
+				best_epoch = epoch + 1
+
+			if np.mod(epoch+1, self.args.save_interval) == 0:
+				self.save(epoch)
+		
+		return best_epoch	
+			
 
 
 
