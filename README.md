@@ -1,5 +1,5 @@
 # DKVMN
-Dynamic Key-Value Memory Networks for Knowledge Tracing
+Implementation of Dynamic Key-Value Memory Networks for Knowledge Tracing
 
 https://arxiv.org/abs/1611.08108
 
