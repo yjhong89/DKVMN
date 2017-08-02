@@ -1,8 +1,6 @@
 # DKVMN
-Implementation of Dynamic Key-Value Memory Networks for Knowledge Tracing
+Implementation of Dynamic Key-Value Memory Networks for Knowledge Tracing in tensorflow
 
 https://arxiv.org/abs/1611.08108
 
-Referenced https://github.com/jennyzhang0215/DKVMN/
-
-Change 'mxnet' code to 'tensorflow'
+Referenced https://github.com/jennyzhang0215/DKVMN/(mxnet code)
