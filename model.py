@@ -241,28 +241,13 @@ class Model():
 	# Log file
 	def write_log(self, auc, accuracy, loss, epoch, name='training_'):
 		try:
-			self.log_file = open(os.path.join(self.args.log_dir, name+self.model_dir), 'a')
+			self.log_file = open(os.path.join(self.args.log_dir, name+self.model_dir+'.csv'), 'a')
 		except:
-			self.log_file = open(os.path.join(self.args.log_dir, self.args.filename), 'w')
+			self.log_file = open(os.path.join(self.args.log_dir, name+self.model_dir+'.csv'), 'w')
 			self.log_file.write('Epoch\tAuc\tAccurac\tloss\n')
 		
 		self.log_file.write(str(epoch) + '\t' + str(auc) + '\t' + str(accuracy) + '\t' + str(loss) + '\n')
 		self.log_file.flush()	
 		
-
-
-
-
-
-
-
-
-
-
-
-	
-		
-
-
 
 
