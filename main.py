@@ -13,7 +13,6 @@ def main():
 	parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 	parser.add_argument('--log_dir', type=str, default='logs')
 	parser.add_argument('--data_dir', type=str, default='data')
-	
 	# synthetic / assist2009_updated / assist2015 / STATIC
 	dataset = 'assist2009_updated'
 
@@ -75,6 +74,8 @@ def main():
 	print(args)
 	if not os.path.exists(args.checkpoint_dir):
 		os.mkdir(args.checkpoint_dir)
+	if not os.path.exists(args.log_dir):
+		os.mkdir(args.log_dir)
 	if not os.path.exists(args.data_dir):
 		os.mkdir(args.data_dir)
 		raise Exception('Need data set')
@@ -89,7 +90,9 @@ def main():
 	valid_data_path = os.path.join(data_directory, args.dataset + '_valid1.csv')
 
 	train_q_data, train_qa_data = data.load_data(train_data_path)
+	print('Train data loaded')
 	valid_q_data, valid_qa_data = data.load_data(valid_data_path)
+	print('Valid data loaded')
 
 	print('Shape of train data : %s, valid data : %s' % (train_q_data.shape, valid_q_data.shape))
 

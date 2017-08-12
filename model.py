@@ -158,13 +158,13 @@ class Model():
 				right_pred = np.asarray(pred_).reshape(-1,)
 				# np.flatnonzero returns indices which is nonzero, convert it list 
 				right_index = np.flatnonzero(right_target != -1).tolist()
-				
 				# 'training_step' elements list with [batch size * seq_len, ]
 				pred_list.append(right_pred[right_index])
 				target_list.append(right_target[right_index])
 
 				epoch_loss += loss_
 				print('Epoch %d/%d, steps %d/%d, loss : %3.5f' % (epoch+1, self.args.num_epochs, steps+1, training_step, loss_))
+				
 
 			if self.args.show:
 				bar.finish()		
@@ -186,21 +186,23 @@ class Model():
 			self.write_log(epoch+1, self.auc, self.accuracy, epoch_loss, name='training_')
 
 			# Validation
-			valid_q = valid_q_data[:self.args.validation_index, :]
-			valid_qa = valid_qa_data[:self.args.validation_index, :]
+			valid_q = valid_q_data[:self.args.batch_size, :]
+			valid_qa = valid_qa_data[:self.args.batch_size, :]
 			# right : 1, wrong : 0, padding : -1
 			valid_target = (valid_qa - 1) // self.args.n_questions
 			valid_feed_dict = {self.q_data : valid_q, self.qa_data : valid_qa, self.target : valid_target}
 			valid_loss, valid_pred = self.sess.run([self.loss, self.pred], feed_dict=valid_feed_dict)
 			# Same with training set
-			valid_right_target = valid_target.asnumpy().reshape(-1,)
-			valid_right_pred = valid_pred.asnumpy().reshape(-1,)
+			valid_right_target = np.asarray(valid_target).reshape(-1,)
+			valid_right_pred = np.asarray(valid_pred).reshape(-1,)
 			valid_right_index = np.flatnonzero(valid_right_target != -1).tolist()
-			valid_auc = metrics.roc_auc_score(valid_right_target[valid_right_index], valid_right_pred[valid_right_index])
+			right_target_of_valid = valid_right_target[valid_right_index]
+			right_pred_of_valid = valid_right_pred[valid_right_index]
+			valid_auc = metrics.roc_auc_score(right_target_of_valid, right_pred_of_valid)
 		 	# For validation accuracy
-			valid_right_pred[valid_right_index][valid_right_pred[valid_right_index] > 0.5] = 1
-			valid_right_pred[valid_right_index][valid_right_pred[valid_right_index] <= 0.5] = 0
-			valid_accuracy = metrics.accuracy_score(valid_right_target[valid_right_index], valid_right_pred[valid_right_index])
+			right_pred_of_valid[right_pred_of_valid > 0.5] = 1
+			right_pred_of_valid[right_pred_of_valid <= 0.5] = 0
+			valid_accuracy = metrics.accuracy_score(right_target_of_valid, right_pred_of_valid)
 			# Valid log
 			self.write_log(epoch+1, valid_auc, valid_accuracy, valid_loss, name='valid_')
 			if valid_auc > best_valid_auc:
