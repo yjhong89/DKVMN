@@ -18,7 +18,7 @@ class Model():
 		# 'seq_len' means question sequences
 		self.q_data = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='q_data') 
 		self.qa_data = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='qa_data')
-		self.target = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='target')
+		self.target = tf.placeholder(tf.float32, [self.args.batch_size, self.args.seq_len], name='target')
 
 		# Initialize Memory
 		with tf.variable_scope('Memory'):
@@ -42,12 +42,12 @@ class Model():
 		q_embed_data = tf.nn.embedding_lookup(q_embed_mtx, self.q_data)
 		# List of [batch size, 1, memory key state dim] with 'seq_len' elements
 		# tf.split(axis, num_splits, value) in tensorflow 0.12v
-		print('Q_embedding shape : %s' % q_embed_data.get_shape())
+		#print('Q_embedding shape : %s' % q_embed_data.get_shape())
 		slice_q_embed_data = tf.split(1, self.args.seq_len, q_embed_data)
-		print(len(slice_q_embed_data), type(slice_q_embed_data), slice_q_embed_data[0].get_shape())
+		#print(len(slice_q_embed_data), type(slice_q_embed_data), slice_q_embed_data[0].get_shape())
 		# Embedding to [batch size, seq_len, memory value state dim]
 		qa_embed_data = tf.nn.embedding_lookup(qa_embed_mtx, self.qa_data)
-		print('QA_embedding shape: %s' % qa_embed_data.get_shape())
+		#print('QA_embedding shape: %s' % qa_embed_data.get_shape())
 		# List of [batch size, 1, memory value state dim] with 'seq_len' elements
 		slice_qa_embed_data = tf.split(1, self.args.seq_len, qa_embed_data)
 		
@@ -77,18 +77,24 @@ class Model():
 			# f_t
 			summary_vector = tf.tanh(operations.linear(mastery_level_prior_difficulty, self.args.final_fc_dim, name='Summary_Vector', reuse=reuse_flag))
 			# p_t
-			pred = tf.sigmoid(operations.linear(summary_vector, 1, name='Prediction', reuse=reuse_flag))
-			print('Prediction shape : %s' % pred.get_shape())
+			pred_logits = operations.linear(summary_vector, 1, name='Prediction', reuse=reuse_flag)
 
-			prediction.append(pred)
+			prediction.append(pred_logits)
 
 		# 'prediction' : seq_len length list of [batch size ,1], make it [batch size, seq_len] tensor
 		# tf.stack convert to [batch size, seq_len, 1]
-		self.pred = tf.reshape(tf.stack(prediction, axis=1), [self.args.batch_size, self.args.seq_len]) 
-		print(self.pred.get_shape())
-		print(self.target.get_shape())
-		# Define loss : standard cross entropy loss
-		self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.target, logits=self.pred))
+		self.pred_logits = tf.reshape(tf.stack(prediction, axis=1), [self.args.batch_size, self.args.seq_len]) 
+
+		# Define loss : standard cross entropy loss, need to ignore '-1' label example
+		# Make target/label 1-d array
+		target_1d = tf.reshape(self.target, [-1])
+		pred_logits_1d = tf.reshape(self.pred_logits, [-1])
+		index = tf.where(tf.not_equal(target_1d, tf.constant(-1, dtype=tf.float32)))
+		# tf.gather(params, indices) : Gather slices from params according to indices
+		filtered_target = tf.gather(target_1d, index)
+		filtered_logits = tf.gather(pred_logits_1d, index)
+		self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(filtered_logits, filtered_target))
+		self.pred = tf.sigmoid(self.pred_logits)
 
 		# Optimizer : SGD + MOMENTUM with learning rate decay
 		global_step = tf.Variable(0, trainable=False)
@@ -203,6 +209,7 @@ class Model():
 			right_pred_of_valid[right_pred_of_valid > 0.5] = 1
 			right_pred_of_valid[right_pred_of_valid <= 0.5] = 0
 			valid_accuracy = metrics.accuracy_score(right_target_of_valid, right_pred_of_valid)
+			print('Epoch %d/%d, valid auc : %3.5f, valid accuracy : %3.5f' %(epoch+1, self.args.num_epochs, valid_auc, valid_accuracy))
 			# Valid log
 			self.write_log(epoch+1, valid_auc, valid_accuracy, valid_loss, name='valid_')
 			if valid_auc > best_valid_auc:

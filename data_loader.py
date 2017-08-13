@@ -34,7 +34,7 @@ class DATA_LOADER():
 			# Answer
 			elif lineid % 3 == 2:
 				print(', Answers')
-				answer_list = line.split(self.seperate_char)	
+				answer_list = line.split(self.seperate_char)
 			
 				# Divide case by seq_len
 				if len(q_tag_list) > self.seq_len:
@@ -57,7 +57,7 @@ class DATA_LOADER():
 					for i in xrange(k*self.seq_len, end_index):
 						# answers in {0,1}
 						qa_values = int(q_tag_list[i]) + int(answer_list[i]) * self.n_questions
-						q_container.append(q_tag_list[i])
+						q_container.append(int(q_tag_list[i]))
 						qa_container.append(qa_values)
 						print('Question tag : %s, Answer : %s, QA : %s' %(q_tag_list[i], answer_list[i], qa_values))
 					# List of list(seq_len, seq_len, seq_len, less than seq_len, seq_len, seq_len...
@@ -80,16 +80,3 @@ class DATA_LOADER():
 
 		return q_data_array, qa_data_array
 
-		
-
-
-
-
-
-
-
-
-
-
-		
-		

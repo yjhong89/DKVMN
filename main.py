@@ -13,6 +13,7 @@ def main():
 	parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 	parser.add_argument('--log_dir', type=str, default='logs')
 	parser.add_argument('--data_dir', type=str, default='data')
+	parser.add_argument('--save_interval', type=int, default=3)
 	# synthetic / assist2009_updated / assist2015 / STATIC
 	dataset = 'assist2009_updated'
 
