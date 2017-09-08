@@ -13,7 +13,8 @@ def main():
 	parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 	parser.add_argument('--log_dir', type=str, default='logs')
 	parser.add_argument('--data_dir', type=str, default='data')
-	parser.add_argument('--save_interval', type=int, default=3)
+	parser.add_argument('--save_interval', type=int, default=10)
+	parser.add_argument('--anneal_interval', type=int, default=20)
 	# synthetic / assist2009_updated / assist2015 / STATIC
 	dataset = 'assist2009_updated'
 
@@ -23,7 +24,6 @@ def main():
 		parser.add_argument('--memory_key_state_dim', type=int, default=50)
 		parser.add_argument('--memory_value_state_dim', type=int, default=200)
 		parser.add_argument('--initial_lr', type=float, default=0.05)
-		parser.add_argument('--final_lr', type=float, default=1e-5)
 		parser.add_argument('--momentum', type=float, default=0.9)
 		parser.add_argument('--maxgradnorm', type=float, default=10)
 		parser.add_argument('--final_fc_dim', type=int, default=50)
@@ -36,7 +36,6 @@ def main():
 		parser.add_argument('--memory_key_state_dim', type=int, defaulti=50)
 		parser.add_argument('--memory_value_state_dim', type=int, default=200)
 		parser.add_argument('--initial_lr', type=float, default=0.05)
-		parser.add_argument('--final_lr', type=float, default=1e-5)
 		parser.add_argument('--momentum', type=float, default=0.9)
 		parser.add_argument('--maxgradnorm', type=float, default=10)
 		parser.add_argument('--final_fc_dim', type=int, default=50)
@@ -49,7 +48,6 @@ def main():
 		parser.add_argument('--memory_key_state_dim', type=int, defaulti=50)
 		parser.add_argument('--memory_value_state_dim', type=int, default=200)
 		parser.add_argument('--initial_lr', type=float, default=0.05)
-		parser.add_argument('--final_lr', type=float, default=1e-5)
 		parser.add_argument('--momentum', type=float, default=0.9)
 		parser.add_argument('--maxgradnorm', type=float, default=10)
 		parser.add_argument('--final_fc_dim', type=int, default=50)
@@ -62,7 +60,6 @@ def main():
 		parser.add_argument('--memory_key_state_dim', type=int, defaulti=50)
 		parser.add_argument('--memory_value_state_dim', type=int, default=200)
 		parser.add_argument('--initial_lr', type=float, default=0.05)
-		parser.add_argument('--final_lr', type=float, default=1e-5)
 		parser.add_argument('--momentum', type=float, default=0.9)
 		parser.add_argument('--maxgradnorm', type=float, default=10)
 		parser.add_argument('--final_fc_dim', type=int, default=50)
@@ -96,6 +93,7 @@ def main():
 	print('Valid data loaded')
 
 	print('Shape of train data : %s, valid data : %s' % (train_q_data.shape, valid_q_data.shape))
+#	decay_step = train_q_data.shape[0] // args.batch_size
 
 	with tf.Session(config=run_config) as sess:
 		dkvmn = Model(args, sess, name='DKVMN')

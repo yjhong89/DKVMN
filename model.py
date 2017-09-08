@@ -96,24 +96,25 @@ class Model():
 		self.pred = tf.sigmoid(self.pred_logits)
 
 		# Optimizer : SGD + MOMENTUM with learning rate decay
-		global_step = tf.Variable(0, trainable=False)
-		lr = tf.train.exponential_decay(self.args.initial_lr, global_step=global_step, decay_steps=2000, decay_rate=0.667, staircase=True)
-		learning_rate = tf.maximum(lr, self.args.final_lr)
-		optimizer = tf.train.MomentumOptimizer(learning_rate, self.args.momentum)
+		self.global_step = tf.Variable(0, trainable=False)
+		self.lr = tf.placeholder(tf.float32, [], name='learning_rate')
+#		self.lr_decay = tf.train.exponential_decay(self.args.initial_lr, global_step=global_step, decay_steps=10000, decay_rate=0.667, staircase=True)
+#		self.learning_rate = tf.maximum(lr, self.args.lr_lowerbound)
+		optimizer = tf.train.MomentumOptimizer(self.lr, self.args.momentum)
 		grads = optimizer.compute_gradients(self.loss)
 		for grad, var in grads:
 			# In case of None gradient
 			if grad is not None:
 				clipping = tf.clip_by_value(grad, -self.args.maxgradnorm, self.args.maxgradnorm)
 		with tf.control_dependencies([clipping]):
-			self.train_op = optimizer.apply_gradients(grads, global_step=global_step)
+			self.train_op = optimizer.apply_gradients(grads, global_step=self.global_step)
 #		grad_clip = [(tf.clip_by_value(grad, -self.args.maxgradnorm, self.args.maxgradnorm), var) for grad, var in grads]
 		self.tr_vrbs = tf.trainable_variables()
 		for i in self.tr_vrbs:
 			print(i.name)
 
 		self.saver = tf.train.Saver()
-		
+
 
 	def train(self, train_q_data, train_qa_data, valid_q_data, valid_qa_data):
 		# q_data, qa_data : [samples, seq_len]
@@ -143,8 +144,9 @@ class Model():
 			target_list = list()		
 			epoch_loss = 0
 			best_valid_auc = 0
+			learning_rate = tf.train.exponential_decay(self.args.initial_lr, global_step=self.global_step, decay_steps=self.args.anneal_interval*training_step, decay_rate=0.667, staircase=True)
 
-			print('Epoch %d starts' % (epoch+1))
+			print('Epoch %d starts with learning rate : %3.5f' % (epoch+1, self.sess.run(learning_rate)))
 			for steps in xrange(training_step):
 				# [batch size, seq_len]
 				q_batch_seq = q_data_shuffled[steps*self.args.batch_size:(steps+1)*self.args.batch_size, :]
@@ -154,8 +156,10 @@ class Model():
 				# right : 1, wrong : 0, padding : -1
 				target_batch = (qa_batch_seq - 1) // self.args.n_questions  
 
-				feed_dict = {self.q_data:q_batch_seq, self.qa_data:qa_batch_seq, self.target:target_batch}
+				feed_dict = {self.q_data:q_batch_seq, self.qa_data:qa_batch_seq, self.target:target_batch, self.lr:self.sess.run(learning_rate)}
 				loss_, pred_, _, = self.sess.run([self.loss, self.pred, self.train_op], feed_dict=feed_dict)
+				if epoch > 100:
+					self.sess.run(self.global_step.assign_add(-1))
 
 				# Get right answer index
 				# Make [batch size * seq_len, 1]
@@ -168,7 +172,7 @@ class Model():
 				target_list.append(right_target[right_index])
 
 				epoch_loss += loss_
-				print('Epoch %d/%d, steps %d/%d, loss : %3.5f' % (epoch+1, self.args.num_epochs, steps+1, training_step, loss_))
+				#print('Epoch %d/%d, steps %d/%d, loss : %3.5f' % (epoch+1, self.args.num_epochs, steps+1, training_step, loss_))
 				
 
 			if self.args.show:
@@ -231,9 +235,9 @@ class Model():
 		checkpoint_dir = os.path.join(self.args.checkpoint_dir, self.model_dir)
 		ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
 		if ckpt and ckpt.model_checkpoint_path:
-			ckpt_name = os.path.basename(ckpt.model_chekcpoint_path)
+			ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
 			self.train_count = int(ckpt_name.split('-')[-1])
-			self.saver.restore(self.sess, os.path.join(chekcpoint_dir, ckpt_name))
+			self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
 			return True
 		else:
 			return False
