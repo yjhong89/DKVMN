@@ -251,7 +251,7 @@ class Model():
 		log_path = os.path.join(self.args.log_dir, name+self.model_dir+'.csv')
 		if not os.path.exists(log_path):
 			self.log_file = open(log_path, 'w')
-			self.log_file.write('Epoch\tAuc\tAccurac\tloss\n')
+			self.log_file.write('Epoch\tAuc\tAccuracy\tloss\n')
 		else:
 			self.log_file = open(log_path, 'a')	
 		
