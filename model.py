@@ -41,15 +41,14 @@ class Model():
 		# Embedding to [batch size, seq_len, memory key state dim]
 		q_embed_data = tf.nn.embedding_lookup(q_embed_mtx, self.q_data)
 		# List of [batch size, 1, memory key state dim] with 'seq_len' elements
-		# tf.split(axis, num_splits, value) in tensorflow 0.12v
 		#print('Q_embedding shape : %s' % q_embed_data.get_shape())
-		slice_q_embed_data = tf.split(1, self.args.seq_len, q_embed_data)
+		slice_q_embed_data = tf.split(q_embed_data, self.args.seq_len, 1)
 		#print(len(slice_q_embed_data), type(slice_q_embed_data), slice_q_embed_data[0].get_shape())
 		# Embedding to [batch size, seq_len, memory value state dim]
 		qa_embed_data = tf.nn.embedding_lookup(qa_embed_mtx, self.qa_data)
 		#print('QA_embedding shape: %s' % qa_embed_data.get_shape())
 		# List of [batch size, 1, memory value state dim] with 'seq_len' elements
-		slice_qa_embed_data = tf.split(1, self.args.seq_len, qa_embed_data)
+		slice_qa_embed_data = tf.split(qa_embed_data, self.args.seq_len, 1)
 		
 		prediction = list()
 		reuse_flag = False
@@ -72,8 +71,8 @@ class Model():
 			qa = tf.squeeze(slice_qa_embed_data[i], 1)
 			# Only last time step value is necessary
 			self.new_memory_value = self.memory.write(self.correlation_weight, qa, reuse=reuse_flag)
-			# tf.concat(axis, valuelist) in tensorflow v0.12
-			mastery_level_prior_difficulty = tf.concat(1, [self.read_content, q])
+
+			mastery_level_prior_difficulty = tf.concat([self.read_content, q], 1)
 			# f_t
 			summary_vector = tf.tanh(operations.linear(mastery_level_prior_difficulty, self.args.final_fc_dim, name='Summary_Vector', reuse=reuse_flag))
 			# p_t
@@ -93,7 +92,7 @@ class Model():
 		# tf.gather(params, indices) : Gather slices from params according to indices
 		filtered_target = tf.gather(target_1d, index)
 		filtered_logits = tf.gather(pred_logits_1d, index)
-		self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(filtered_logits, filtered_target))
+		self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=filtered_logits, labels=filtered_target))
 		self.pred = tf.sigmoid(self.pred_logits)
 
 		# Optimizer : SGD + MOMENTUM with learning rate decay
