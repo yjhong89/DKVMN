@@ -188,7 +188,7 @@ class Model():
 
 			epoch_loss = epoch_loss / training_step	
 			print('Epoch %d/%d, loss : %3.5f, auc : %3.5f, accuracy : %3.5f' % (epoch+1, self.args.num_epochs, epoch_loss, self.auc, self.accuracy))
-			self.write_log(epoch+1, self.auc, self.accuracy, epoch_loss, name='training_')
+			self.write_log(epoch=epoch+1, auc=self.auc, accuracy=self.accuracy, loss=epoch_loss, name='training_')
 
 			# Validation
 			valid_q = valid_q_data[:self.args.batch_size, :]
@@ -210,7 +210,7 @@ class Model():
 			valid_accuracy = metrics.accuracy_score(right_target_of_valid, right_pred_of_valid)
 			print('Epoch %d/%d, valid auc : %3.5f, valid accuracy : %3.5f' %(epoch+1, self.args.num_epochs, valid_auc, valid_accuracy))
 			# Valid log
-			self.write_log(epoch+1, valid_auc, valid_accuracy, valid_loss, name='valid_')
+			self.write_log(epoch=epoch+1, auc=valid_auc, accuracy=valid_accuracy, loss=valid_loss, name='valid_')
 			if valid_auc > best_valid_auc:
 				best_valid_auc = valid_auc
 				best_epoch = epoch + 1
@@ -248,11 +248,12 @@ class Model():
 
 	# Log file
 	def write_log(self, auc, accuracy, loss, epoch, name='training_'):
-		try:
-			self.log_file = open(os.path.join(self.args.log_dir, name+self.model_dir+'.csv'), 'a')
-		except:
-			self.log_file = open(os.path.join(self.args.log_dir, name+self.model_dir+'.csv'), 'w')
+		log_path = os.path.join(self.args.log_dir, name+self.model_dir+'.csv')
+		if not os.path.exists(log_path):
+			self.log_file = open(log_path, 'w')
 			self.log_file.write('Epoch\tAuc\tAccurac\tloss\n')
+		else:
+			self.log_file = open(log_path, 'a')	
 		
 		self.log_file.write(str(epoch) + '\t' + str(auc) + '\t' + str(accuracy) + '\t' + str(loss) + '\n')
 		self.log_file.flush()	
