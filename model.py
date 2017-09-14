@@ -141,6 +141,7 @@ class Model():
 		else:
 			print('No checkpoint')
 
+		self.sess.run(self.global_step.assign(0))
 		# Training
 		for epoch in xrange(0, self.args.num_epochs):
 			if self.args.show:
@@ -150,7 +151,6 @@ class Model():
 			target_list = list()		
 			epoch_loss = 0
 			best_valid_auc = 0
-			self.sess.run(self.global_step.assign(0))
 			learning_rate = tf.train.exponential_decay(self.args.initial_lr, global_step=self.global_step, decay_steps=self.args.anneal_interval*training_step, decay_rate=0.667, staircase=True)
 
 			print('Epoch %d starts with learning rate : %3.5f' % (epoch+1, self.sess.run(learning_rate)))
