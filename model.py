@@ -161,7 +161,11 @@ class Model():
 	
 				# qa : exercise index + answer(0 or 1)*exercies_number
 				# right : 1, wrong : 0, padding : -1
-				target_batch = (qa_batch_seq - 1) // self.args.n_questions  
+				target = qa_batch_seq[:,:]
+				# Make integer type to calculate target
+				target = target.astype(np.int)
+				target_batch = (target - 1) / self.args.n_questions  
+				target_batch = target_batch.astype(np.float)
 
 				feed_dict = {self.q_data:q_batch_seq, self.qa_data:qa_batch_seq, self.target:target_batch, self.lr:self.sess.run(learning_rate)}
 				loss_, pred_, _, = self.sess.run([self.loss, self.pred, self.train_op], feed_dict=feed_dict)
@@ -170,11 +174,19 @@ class Model():
 
 				# Get right answer index
 				# Make [batch size * seq_len, 1]
-				right_target = np.asarray(target_batch).reshape(-1,)
-				right_pred = np.asarray(pred_).reshape(-1,)
+				right_target = np.asarray(target_batch).reshape(-1,1)
+				right_pred = np.asarray(pred_).reshape(-1,1)
+			#	print('Prediction')
+			#	print(right_pred)
+			#	print('Target')
+			#	print(right_target)
 				# np.flatnonzero returns indices which is nonzero, convert it list 
 				right_index = np.flatnonzero(right_target != -1.).tolist()
-				# 'training_step' elements list with [batch size * seq_len, ]
+			#	print('Index')
+			#	print(right_index)
+				# Number of 'training_step' elements list with [batch size * seq_len, ]
+			#	print(right_pred[right_index])
+			#	print(right_target[right_index])
 				pred_list.append(right_pred[right_index])
 				target_list.append(right_target[right_index])
 
@@ -185,8 +197,8 @@ class Model():
 			if self.args.show:
 				bar.finish()		
 			
-			all_pred = np.concatenate(pred_list)
-			all_target = np.concatenate(target_list)
+			all_pred = np.concatenate(pred_list, axis=0)
+			all_target = np.concatenate(target_list, axis=0)
 
 			# Compute metrics
 			self.auc = metrics.roc_auc_score(all_target, all_pred)
