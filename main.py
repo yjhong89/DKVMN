@@ -7,7 +7,7 @@ from data_loader import *
 
 def main():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--num_epochs', type=int, default=500)
+	parser.add_argument('--num_epochs', type=int, default=100)
 	parser.add_argument('--train', type=str2bool, default='t')
 	parser.add_argument('--show', type=str2bool, default='f')
 	parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
@@ -84,7 +84,7 @@ def main():
 
 	data = DATA_LOADER(args.n_questions, args.seq_len, ',')
 	data_directory = os.path.join(args.data_dir, args.dataset)
-	train_data_path = os.path.join(data_directory, args.dataset + '_train.csv')
+	train_data_path = os.path.join(data_directory, args.dataset + '_train1.csv')
 	valid_data_path = os.path.join(data_directory, args.dataset + '_valid1.csv')
 
 	train_q_data, train_qa_data = data.load_data(train_data_path)

@@ -24,9 +24,15 @@ class Model():
 		with tf.variable_scope('Memory'):
 			init_memory_key = tf.get_variable('key', [self.args.memory_size, self.args.memory_key_state_dim], \
 				initializer=tf.truncated_normal_initializer(stddev=0.1))
-			init_memory_value = tf.get_variable('value', [self.args.batch_size, self.args.memory_size,\
-				 self.args.memory_value_state_dim], initializer=tf.truncated_normal_initializer(stddev=0.1))
-		
+			init_memory_value = tf.get_variable('value', [self.args.memory_size,self.args.memory_value_state_dim], \
+				initializer=tf.truncated_normal_initializer(stddev=0.1))
+		# Broadcast memory value tensor to match [batch size, memory size, memory state dim]
+		# First expand dim at axis 0 so that makes 'batch size' axis and tile it along 'batch size' axis
+		# tf.tile(inputs, multiples) : multiples length must be thes saame as the number of dimensions in input
+		# tf.stack takes a list and convert each element to a tensor
+		init_memory_value = tf.tile(tf.expand_dims(init_memory_value, 0), tf.stack([self.args.batch_size, 1, 1]))
+		print(init_memory_value.get_shape())
+				
 		self.memory = DKVMN(self.args.memory_size, self.args.memory_key_state_dim, \
 				self.args.memory_value_state_dim, init_memory_key=init_memory_key, init_memory_value=init_memory_value, name='DKVMN')
 
@@ -88,7 +94,7 @@ class Model():
 		# Make target/label 1-d array
 		target_1d = tf.reshape(self.target, [-1])
 		pred_logits_1d = tf.reshape(self.pred_logits, [-1])
-		index = tf.where(tf.not_equal(target_1d, tf.constant(-1, dtype=tf.float32)))
+		index = tf.where(tf.not_equal(target_1d, tf.constant(-1., dtype=tf.float32)))
 		# tf.gather(params, indices) : Gather slices from params according to indices
 		filtered_target = tf.gather(target_1d, index)
 		filtered_logits = tf.gather(pred_logits_1d, index)
@@ -136,7 +142,7 @@ class Model():
 			print('No checkpoint')
 
 		# Training
-		for epoch in xrange(self.train_count, self.args.num_epochs):
+		for epoch in xrange(0, self.args.num_epochs):
 			if self.args.show:
 				bar.next()
 
@@ -144,6 +150,7 @@ class Model():
 			target_list = list()		
 			epoch_loss = 0
 			best_valid_auc = 0
+			self.sess.run(self.global_step.assign(0))
 			learning_rate = tf.train.exponential_decay(self.args.initial_lr, global_step=self.global_step, decay_steps=self.args.anneal_interval*training_step, decay_rate=0.667, staircase=True)
 
 			print('Epoch %d starts with learning rate : %3.5f' % (epoch+1, self.sess.run(learning_rate)))
@@ -166,7 +173,7 @@ class Model():
 				right_target = np.asarray(target_batch).reshape(-1,)
 				right_pred = np.asarray(pred_).reshape(-1,)
 				# np.flatnonzero returns indices which is nonzero, convert it list 
-				right_index = np.flatnonzero(right_target != -1).tolist()
+				right_index = np.flatnonzero(right_target != -1.).tolist()
 				# 'training_step' elements list with [batch size * seq_len, ]
 				pred_list.append(right_pred[right_index])
 				target_list.append(right_target[right_index])
@@ -248,7 +255,7 @@ class Model():
 		if not os.path.exists(checkpoint_dir):
 			os.mkdir(checkpoint_dir)
 		self.saver.save(self.sess, os.path.join(checkpoint_dir, model_name), global_step=global_step)
-		print('Save checkpoint at %d' % global_step)
+		print('Save checkpoint at %d' % (global_step+1))
 
 	# Log file
 	def write_log(self, auc, accuracy, loss, epoch, name='training_'):
@@ -262,5 +269,3 @@ class Model():
 		self.log_file.write(str(epoch) + '\t' + str(auc) + '\t' + str(accuracy) + '\t' + str(loss) + '\n')
 		self.log_file.flush()	
 		
-
-
