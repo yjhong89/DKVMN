@@ -66,13 +66,13 @@ class DATA_LOADER():
 		f_data.close()
 
 		# Convert it to numpy array
-		q_data_array = np.ones((len(q_data), self.seq_len)) * 0
+		q_data_array = np.zeros((len(q_data), self.seq_len))
 		for i in xrange(len(q_data)):
 			data = q_data[i]
 			# if q_data[i] less than seq_len, remainder would be 0 
 			q_data_array[i, :len(data)] = data
 
-		qa_data_array = np.ones((len(qa_data), self.seq_len)) * 0
+		qa_data_array = np.zeros((len(qa_data), self.seq_len))
 		for i in xrange(len(qa_data)):
 			data = qa_data[i]
 			# if qa_data[i] less than seq_len, remainder would be 0

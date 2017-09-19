@@ -84,8 +84,8 @@ def main():
 
 	data = DATA_LOADER(args.n_questions, args.seq_len, ',')
 	data_directory = os.path.join(args.data_dir, args.dataset)
-	train_data_path = os.path.join(data_directory, args.dataset + '_train1.csv')
-	valid_data_path = os.path.join(data_directory, args.dataset + '_valid1.csv')
+	train_data_path = os.path.join(data_directory, args.dataset + '_train2.csv')
+	valid_data_path = os.path.join(data_directory, args.dataset + '_valid2.csv')
 
 	train_q_data, train_qa_data = data.load_data(train_data_path)
 	print('Train data loaded')

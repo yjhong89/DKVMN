@@ -110,8 +110,8 @@ class DKVMN():
 		return read_content
 
 	def write(self, c_weight, qa_embedded, reuse):
-		new_memory_value = self.value.write(value_matrix=self.memory_value, correlation_weight=c_weight, qa_embedded=qa_embedded, reuse=reuse)
-		return new_memory_value
+		self.memory_value = self.value.write(value_matrix=self.memory_value, correlation_weight=c_weight, qa_embedded=qa_embedded, reuse=reuse)
+		return self.memory_value
 
 
 
