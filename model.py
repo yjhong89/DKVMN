@@ -2,6 +2,7 @@ import numpy as np
 import os, time
 import tensorflow as tf
 import operations
+import shutil
 from memory import DKVMN
 from sklearn import metrics
 
@@ -136,12 +137,20 @@ class Model():
 			bar = ProgressBar(label, max=training_step)
 
 		self.train_count = 0
-		if self.load():
-			print('Checkpoint_loaded')
+		if self.args.init_from:
+			if self.load():
+				print('Checkpoint_loaded')
+			else:
+				print('No checkpoint')
 		else:
-			print('No checkpoint')
+			if os.path.exists(os.path.join(self.args.checkpoint_dir, self.model_dir)):
+				try:
+					shutil.rmtree(os.path.join(self.args.checkpoint_dir, self.model_dir))
+					shutil.rmtree(os.path.join(self.args.log_dir, self.mode_dir+'.csv'))
+				except(FileNotFoundError, IOError) as e:
+					print('[Delete Error] %s - %s' % (e.filename, e.strerror))
+		
 
-		self.sess.run(self.global_step.assign(0))
 		# Training
 		for epoch in xrange(0, self.args.num_epochs):
 			if self.args.show:
@@ -153,7 +162,7 @@ class Model():
 			best_valid_auc = 0
 			learning_rate = tf.train.exponential_decay(self.args.initial_lr, global_step=self.global_step, decay_steps=self.args.anneal_interval*training_step, decay_rate=0.667, staircase=True)
 
-			print('Epoch %d starts with learning rate : %3.5f' % (epoch+1, self.sess.run(learning_rate)))
+			#print('Epoch %d starts with learning rate : %3.5f' % (epoch+1, self.sess.run(learning_rate)))
 			for steps in xrange(training_step):
 				# [batch size, seq_len]
 				q_batch_seq = q_data_shuffled[steps*self.args.batch_size:(steps+1)*self.args.batch_size, :]
@@ -167,7 +176,8 @@ class Model():
 				target_batch = (target - 1) / self.args.n_questions  
 				target_batch = target_batch.astype(np.float)
 
-				feed_dict = {self.q_data:q_batch_seq, self.qa_data:qa_batch_seq, self.target:target_batch, self.lr:self.sess.run(learning_rate)}
+				feed_dict = {self.q_data:q_batch_seq, self.qa_data:qa_batch_seq, self.target:target_batch, self.lr:self.args.initial_lr}
+				#self.lr:self.sess.run(learning_rate)
 				loss_, pred_, _, = self.sess.run([self.loss, self.pred, self.train_op], feed_dict=feed_dict)
 				if epoch > 100:
 					self.sess.run(self.global_step.assign_add(-1))
@@ -176,17 +186,9 @@ class Model():
 				# Make [batch size * seq_len, 1]
 				right_target = np.asarray(target_batch).reshape(-1,1)
 				right_pred = np.asarray(pred_).reshape(-1,1)
-			#	print('Prediction')
-			#	print(right_pred)
-			#	print('Target')
-			#	print(right_target)
 				# np.flatnonzero returns indices which is nonzero, convert it list 
 				right_index = np.flatnonzero(right_target != -1.).tolist()
-			#	print('Index')
-			#	print(right_index)
 				# Number of 'training_step' elements list with [batch size * seq_len, ]
-			#	print(right_pred[right_index])
-			#	print(right_target[right_index])
 				pred_list.append(right_pred[right_index])
 				target_list.append(right_target[right_index])
 
