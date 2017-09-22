@@ -20,7 +20,7 @@ def main():
 	parser.add_argument('--momentum', type=float, default=0.9)
 	parser.add_argument('--initial_lr', type=float, default=0.05)
 	# synthetic / assist2009_updated / assist2015 / STATIC
-	dataset = 'assist2009_updated'
+	dataset = 'STATICS'
 
 	if dataset == 'assist2009_updated':
 		parser.add_argument('--batch_size', type=int, default=32)
@@ -34,7 +34,7 @@ def main():
 	elif dataset == 'synthetic':
 		parser.add_argument('--batch_size', type=int, default=32)
 		parser.add_argument('--memory_size', type=int, default=5)
-		parser.add_argument('--memory_key_state_dim', type=int, defaulti=10)
+		parser.add_argument('--memory_key_state_dim', type=int, default=10)
 		parser.add_argument('--memory_value_state_dim', type=int, default=10)
 		parser.add_argument('--final_fc_dim', type=int, default=50)
 		parser.add_argument('--n_questions', type=int, default=50)
@@ -43,16 +43,16 @@ def main():
 	elif dataset == 'assist2015':
 		parser.add_argument('--batch_size', type=int, default=50)
 		parser.add_argument('--memory_size', type=int, default=20)
-		parser.add_argument('--memory_key_state_dim', type=int, defaulti=50)
+		parser.add_argument('--memory_key_state_dim', type=int, default=50)
 		parser.add_argument('--memory_value_state_dim', type=int, default=100)
 		parser.add_argument('--final_fc_dim', type=int, default=50)
 		parser.add_argument('--n_questions', type=int, default=100)
 		parser.add_argument('--seq_len', type=int, default=200)
 
-	elif dataset == 'STATIC':
+	elif dataset == 'STATICS':
 		parser.add_argument('--batch_size', type=int, default=10)
 		parser.add_argument('--memory_size', type=int, default=50)
-		parser.add_argument('--memory_key_state_dim', type=int, defaulti=50)
+		parser.add_argument('--memory_key_state_dim', type=int, default=50)
 		parser.add_argument('--memory_value_state_dim', type=int, default=100)
 		parser.add_argument('--final_fc_dim', type=int, default=50)
 		parser.add_argument('--n_questions', type=int, default=1223)
