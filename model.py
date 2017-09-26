@@ -108,13 +108,9 @@ class Model():
 #		self.lr_decay = tf.train.exponential_decay(self.args.initial_lr, global_step=global_step, decay_steps=10000, decay_rate=0.667, staircase=True)
 #		self.learning_rate = tf.maximum(lr, self.args.lr_lowerbound)
 		optimizer = tf.train.MomentumOptimizer(self.lr, self.args.momentum)
-		grads = optimizer.compute_gradients(self.loss)
-		for grad, var in grads:
-			# In case of None gradient
-			if grad is not None:
-				clipping = tf.clip_by_value(grad, -self.args.maxgradnorm, self.args.maxgradnorm)
-		with tf.control_dependencies([clipping]):
-			self.train_op = optimizer.apply_gradients(grads, global_step=self.global_step)
+		grads, vrbs = zip(*optimizer.compute_gradients(self.loss))
+		grad, _ = tf.clip_by_global_norm(grads, self.args.maxgradnorm)
+		self.train_op = optimizer.apply_gradients(zip(grad, vrbs), global_step=self.global_step)
 #		grad_clip = [(tf.clip_by_value(grad, -self.args.maxgradnorm, self.args.maxgradnorm), var) for grad, var in grads]
 		self.tr_vrbs = tf.trainable_variables()
 		for i in self.tr_vrbs:
