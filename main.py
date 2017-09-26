@@ -20,7 +20,7 @@ def main():
 	parser.add_argument('--momentum', type=float, default=0.9)
 	parser.add_argument('--initial_lr', type=float, default=0.05)
 	# synthetic / assist2009_updated / assist2015 / STATIC
-	dataset = 'assist2009_updated'
+	dataset = 'assist2015'
 
 	if dataset == 'assist2009_updated':
 		parser.add_argument('--batch_size', type=int, default=32)
@@ -76,23 +76,26 @@ def main():
 
 	data = DATA_LOADER(args.n_questions, args.seq_len, ',')
 	data_directory = os.path.join(args.data_dir, args.dataset)
-	train_data_path = os.path.join(data_directory, args.dataset + '_train1.csv')
-	valid_data_path = os.path.join(data_directory, args.dataset + '_valid1.csv')
-
-	train_q_data, train_qa_data = data.load_data(train_data_path)
-	print('Train data loaded')
-	valid_q_data, valid_qa_data = data.load_data(valid_data_path)
-	print('Valid data loaded')
-
-	print('Shape of train data : %s, valid data : %s' % (train_q_data.shape, valid_q_data.shape))
-#	decay_step = train_q_data.shape[0] // args.batch_size
 
 	with tf.Session(config=run_config) as sess:
 		dkvmn = Model(args, sess, name='DKVMN')
 		if args.train:
+			train_data_path = os.path.join(data_directory, args.dataset + '_train1.csv')
+			valid_data_path = os.path.join(data_directory, args.dataset + '_valid1.csv')
+
+			train_q_data, train_qa_data = data.load_data(train_data_path)
+			print('Train data loaded')
+			valid_q_data, valid_qa_data = data.load_data(valid_data_path)
+			print('Valid data loaded')
+			print('Shape of train data : %s, valid data : %s' % (train_q_data.shape, valid_q_data.shape))
 			print('Start training')
 			dkvmn.train(train_q_data, train_qa_data, valid_q_data, valid_qa_data)
 			#print('Best epoch %d' % (best_epoch))
+		else:
+			test_data_path = os.path.join(data_directory, args.dataset + '_test.csv')
+			test_q_data, test_qa_data = data.load_data(test_data_path)
+			print('Test data loaded')
+			dkvmn.test(test_q_data, test_qa_data)
 
 
 
