@@ -240,10 +240,8 @@ class Model():
 			if valid_auc > best_valid_auc:
 				best_valid_auc = valid_auc
 				best_epoch = epoch + 1
-
-			if np.mod(epoch+1, self.args.save_interval) == 0:
 				self.save(epoch)
-		
+
 		return best_epoch	
 			
 	def test(self, test_q, test_qa):

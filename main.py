@@ -14,13 +14,12 @@ def main():
 	parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 	parser.add_argument('--log_dir', type=str, default='logs')
 	parser.add_argument('--data_dir', type=str, default='data')
-	parser.add_argument('--save_interval', type=int, default=10)
 	parser.add_argument('--anneal_interval', type=int, default=20)
 	parser.add_argument('--maxgradnorm', type=float, default=50.0)
 	parser.add_argument('--momentum', type=float, default=0.9)
 	parser.add_argument('--initial_lr', type=float, default=0.05)
 	# synthetic / assist2009_updated / assist2015 / STATIC
-	dataset = 'assist2009_updated'
+	dataset = 'STATICS'
 
 	if dataset == 'assist2009_updated':
 		parser.add_argument('--batch_size', type=int, default=32)
