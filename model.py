@@ -179,9 +179,6 @@ class Model():
 				feed_dict = {self.q_data:q_batch_seq, self.qa_data:qa_batch_seq, self.target:target_batch, self.lr:self.args.initial_lr}
 				#self.lr:self.sess.run(learning_rate)
 				loss_, pred_, _, = self.sess.run([self.loss, self.pred, self.train_op], feed_dict=feed_dict)
-				if epoch > 100:
-					self.sess.run(self.global_step.assign_add(-1))
-
 				# Get right answer index
 				# Make [batch size * seq_len, 1]
 				right_target = np.asarray(target_batch).reshape(-1,1)
@@ -215,24 +212,32 @@ class Model():
 			print('Epoch %d/%d, loss : %3.5f, auc : %3.5f, accuracy : %3.5f' % (epoch+1, self.args.num_epochs, epoch_loss, self.auc, self.accuracy))
 			self.write_log(epoch=epoch+1, auc=self.auc, accuracy=self.accuracy, loss=epoch_loss, name='training_')
 
-			# Validation
-			valid_q = valid_q_data[:self.args.batch_size, :]
-			valid_qa = valid_qa_data[:self.args.batch_size, :]
-			# right : 1, wrong : 0, padding : -1
-			valid_target = (valid_qa - 1) // self.args.n_questions
-			valid_feed_dict = {self.q_data : valid_q, self.qa_data : valid_qa, self.target : valid_target}
-			valid_loss, valid_pred = self.sess.run([self.loss, self.pred], feed_dict=valid_feed_dict)
-			# Same with training set
-			valid_right_target = np.asarray(valid_target).reshape(-1,)
-			valid_right_pred = np.asarray(valid_pred).reshape(-1,)
-			valid_right_index = np.flatnonzero(valid_right_target != -1).tolist()
-			right_target_of_valid = valid_right_target[valid_right_index]
-			right_pred_of_valid = valid_right_pred[valid_right_index]
-			valid_auc = metrics.roc_auc_score(right_target_of_valid, right_pred_of_valid)
+			valid_steps = valid_q_data.shape[0] // self.args.batch_size
+			valid_pred_list = list()
+			valid_target_list = list()
+			for s in range(valid_steps):
+				# Validation
+				valid_q = valid_q_data[s*self.args.batch_size:(s+1)*self.args.batch_size, :]
+				valid_qa = valid_qa_data[s*self.args.batch_size:(s+1)*self.args.batch_size, :]
+				# right : 1, wrong : 0, padding : -1
+				valid_target = (valid_qa - 1) // self.args.n_questions
+				valid_feed_dict = {self.q_data : valid_q, self.qa_data : valid_qa, self.target : valid_target}
+				valid_loss, valid_pred = self.sess.run([self.loss, self.pred], feed_dict=valid_feed_dict)
+				# Same with training set
+				valid_right_target = np.asarray(valid_target).reshape(-1,)
+				valid_right_pred = np.asarray(valid_pred).reshape(-1,)
+				valid_right_index = np.flatnonzero(valid_right_target != -1).tolist()	
+				valid_target_list.append(valid_right_target[valid_right_index])
+				valid_pred_list.append(valid_right_pred[valid_right_index])
+			
+			all_valid_pred = np.concatenate(valid_pred_list, axis=0)
+			all_valid_target = np.concatenate(valid_target_list, axis=0)
+
+			valid_auc = metrics.roc_auc_score(all_valid_target, all_valid_pred)
 		 	# For validation accuracy
-			right_pred_of_valid[right_pred_of_valid > 0.5] = 1
-			right_pred_of_valid[right_pred_of_valid <= 0.5] = 0
-			valid_accuracy = metrics.accuracy_score(right_target_of_valid, right_pred_of_valid)
+			all_valid_pred[all_valid_pred > 0.5] = 1
+			all_valid_pred[all_valid_pred <= 0.5] = 0
+			valid_accuracy = metrics.accuracy_score(all_valid_target, all_valid_pred)
 			print('Epoch %d/%d, valid auc : %3.5f, valid accuracy : %3.5f' %(epoch+1, self.args.num_epochs, valid_auc, valid_accuracy))
 			# Valid log
 			self.write_log(epoch=epoch+1, auc=valid_auc, accuracy=valid_accuracy, loss=valid_loss, name='valid_')
@@ -245,7 +250,50 @@ class Model():
 		
 		return best_epoch	
 			
+	def test(self, test_q, test_qa):
+		steps = test_q.shape[0] // self.args.batch_size
+		self.sess.run(tf.global_variables_initializer())
+		if self.load():
+			print('CKPT Loaded')
+		else:
+			raise Exception('CKPT need')
 
+		pred_list = list()
+		target_list = list()
+
+		for s in range(steps):
+			test_q_batch = test_q[s*self.args.batch_size:(s+1)*self.args.batch_size, :]
+			test_qa_batch = test_qa[s*self.args.batch_size:(s+1)*self.args.batch_size, :]
+			target = test_qa_batch[:,:]
+			target = target.astype(np.int)
+			target_batch = (target - 1) / self.args.n_questions  
+			target_batch = target_batch.astype(np.float)
+			feed_dict = {self.q_data:test_q_batch, self.qa_data:test_qa_batch, self.target:target_batch}
+			loss_, pred_ = self.sess.run([self.loss, self.pred], feed_dict=feed_dict)
+			# Get right answer index
+			# Make [batch size * seq_len, 1]
+			right_target = np.asarray(target_batch).reshape(-1,1)
+			right_pred = np.asarray(pred_).reshape(-1,1)
+			# np.flatnonzero returns indices which is nonzero, convert it list 
+			right_index = np.flatnonzero(right_target != -1.).tolist()
+			# Number of 'training_step' elements list with [batch size * seq_len, ]
+			pred_list.append(right_pred[right_index])
+			target_list.append(right_target[right_index])
+
+		all_pred = np.concatenate(pred_list, axis=0)
+		all_target = np.concatenate(target_list, axis=0)
+
+		# Compute metrics
+		self.test_auc = metrics.roc_auc_score(all_target, all_pred)
+		# Extract elements with boolean index
+		# Make '1' for elements higher than 0.5
+		# Make '0' for elements lower than 0.5
+		all_pred[all_pred > 0.5] = 1
+		all_pred[all_pred <= 0.5] = 0
+
+		self.test_accuracy = metrics.accuracy_score(all_target, all_pred)
+
+		print('Test auc : %3.4f, Test accuracy : %3.4f' % (self.test_auc, self.test_accuracy))
 
 
 	@property
