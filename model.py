@@ -146,6 +146,7 @@ class Model():
 				except(FileNotFoundError, IOError) as e:
 					print('[Delete Error] %s - %s' % (e.filename, e.strerror))
 		
+		best_valid_auc = 0
 
 		# Training
 		for epoch in xrange(0, self.args.num_epochs):
@@ -155,7 +156,6 @@ class Model():
 			pred_list = list()
 			target_list = list()		
 			epoch_loss = 0
-			best_valid_auc = 0
 			learning_rate = tf.train.exponential_decay(self.args.initial_lr, global_step=self.global_step, decay_steps=self.args.anneal_interval*training_step, decay_rate=0.667, staircase=True)
 
 			#print('Epoch %d starts with learning rate : %3.5f' % (epoch+1, self.sess.run(learning_rate)))
@@ -238,9 +238,10 @@ class Model():
 			# Valid log
 			self.write_log(epoch=epoch+1, auc=valid_auc, accuracy=valid_accuracy, loss=valid_loss, name='valid_')
 			if valid_auc > best_valid_auc:
+				print('%3.4f to %3.4f' % (best_valid_auc, valid_auc))
 				best_valid_auc = valid_auc
 				best_epoch = epoch + 1
-				self.save(epoch)
+				self.save(best_epoch)
 
 		return best_epoch	
 			
