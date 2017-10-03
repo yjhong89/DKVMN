@@ -1,0 +1,6 @@
+model_checkpoint_path: "DKVMN-300"
+all_model_checkpoint_paths: "DKVMN-296"
+all_model_checkpoint_paths: "DKVMN-297"
+all_model_checkpoint_paths: "DKVMN-298"
+all_model_checkpoint_paths: "DKVMN-299"
+all_model_checkpoint_paths: "DKVMN-300"
