@@ -7,9 +7,9 @@ from data_loader import *
 
 def main():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--num_epochs', type=int, default=200)
+	parser.add_argument('--num_epochs', type=int, default=300)
 	parser.add_argument('--train', type=str2bool, default='t')
-	parser.add_argument('--init_from', type=str2bool, default='n')
+	parser.add_argument('--init_from', type=str2bool, default='t')
 	parser.add_argument('--show', type=str2bool, default='f')
 	parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 	parser.add_argument('--log_dir', type=str, default='logs')
