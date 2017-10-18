@@ -169,7 +169,7 @@ class Model():
 				target = qa_batch_seq[:,:]
 				# Make integer type to calculate target
 				target = target.astype(np.int)
-				target_batch = (target - 1) / self.args.n_questions  
+				target_batch = (target - 1) // self.args.n_questions  
 				target_batch = target_batch.astype(np.float)
 
 				feed_dict = {self.q_data:q_batch_seq, self.qa_data:qa_batch_seq, self.target:target_batch, self.lr:self.args.initial_lr}
