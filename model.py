@@ -261,7 +261,7 @@ class Model():
 			test_qa_batch = test_qa[s*self.args.batch_size:(s+1)*self.args.batch_size, :]
 			target = test_qa_batch[:,:]
 			target = target.astype(np.int)
-			target_batch = (target - 1) / self.args.n_questions  
+			target_batch = (target - 1) // self.args.n_questions  
 			target_batch = target_batch.astype(np.float)
 			feed_dict = {self.q_data:test_q_batch, self.qa_data:test_qa_batch, self.target:target_batch}
 			loss_, pred_ = self.sess.run([self.loss, self.pred], feed_dict=feed_dict)
